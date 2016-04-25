@@ -30,28 +30,106 @@ class TMDBClient : NSObject {
     override init() {
         super.init()
     }
+    
+    
 
     // MARK: GET
     
-    //func taskForGETMethod(method: String, var parameters: [String:AnyObject], completionHandlerForGET: (result: AnyObject!, error: NSError?) -> Void) -> NSURLSessionDataTask {}
+    func taskForGETMethod(method: String, parameters: [String:AnyObject], completionHandlerForGET: (result: AnyObject!, error: NSError?) -> Void) -> NSURLSessionDataTask {
+        
+        var methodParameters = parameters
+        methodParameters[TMDBClient.ParameterKeys.ApiKey] = TMDBClient.Constants.ApiKey
+        
+        let request = NSURLRequest(URL: TMDBClient.tmdbURLFromParameters(methodParameters, withPathExtension: method))
+        
+        let task = session.dataTaskWithRequest(request) { (data, response, error) in
+            
+            func sendError(error: String) {
+                let userInfo = [NSLocalizedDescriptionKey: error]
+                completionHandlerForGET(result: nil, error: NSError(domain: "taskForGETMethod", code: 1, userInfo: userInfo))
+            }
+            
+            /* GUARD: Was there an error? */
+            guard (error == nil) else {
+                sendError("There was an error with your request: \(error)")
+                return
+            }
+            
+            /* GUARD: Did we get a successful 2XX response? */
+            guard let statusCode = (response as? NSHTTPURLResponse)?.statusCode where statusCode >= 200 && statusCode <= 299 else {
+                sendError("Your request returned a status code other than 2xx!")
+                return
+            }
+            
+            /* GUARD: Was there any data returned? */
+            guard let data = data else {
+                sendError("No data was returned by the request!")
+                return
+            }
+            
+            self.convertDataWithCompletionHandler(data, completionHandlerForConvertData: completionHandlerForGET)
+        }
+        
+        task.resume()
+        
+        return task;
+    }
     
     // MARK: POST
     
-    //func taskForPOSTMethod(method: String, var parameters: [String:AnyObject], jsonBody: [String:AnyObject], completionHandlerForPOST: (result: AnyObject!, error: NSError?) -> Void) -> NSURLSessionDataTask {}
+    func taskForPOSTMethod(method: String, parameters: [String:AnyObject], jsonBody: String, completionHandlerForPOST: (result: AnyObject!, error: NSError?) -> Void) -> NSURLSessionDataTask {
+        
+        var methodParameters = parameters
+        methodParameters[TMDBClient.ParameterKeys.ApiKey] = TMDBClient.Constants.ApiKey
+        
+        let request = NSMutableURLRequest(URL: TMDBClient.tmdbURLFromParameters(methodParameters, withPathExtension: method))
+        request.HTTPMethod = "POST"
+        request.addValue("application/json", forHTTPHeaderField: "Accept")
+        request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        request.HTTPBody = jsonBody.dataUsingEncoding(NSUTF8StringEncoding)
+        
+        let task = session.dataTaskWithRequest(request) { (data, response, error) in
+            
+            func sendError(error: String) {
+                let userInfo = [NSLocalizedDescriptionKey: error]
+                completionHandlerForPOST(result: nil, error: NSError(domain: "taskForPOSTMethod", code: 1, userInfo: userInfo))
+            }
+            
+            guard (error == nil) else {
+                sendError("There was an error with your request: \(error)")
+                return
+            }
+            
+            guard let statusCode = (response as? NSHTTPURLResponse)?.statusCode where statusCode >= 200 && statusCode <= 299 else {
+                sendError("Your request returned a status code other than 2xx")
+                return
+            }
+            
+            /* GUARD: Was there any data returned? */
+            guard let data = data else {
+                sendError("No data was returned by the request!")
+                return
+            }
+            
+            self.convertDataWithCompletionHandler(data, completionHandlerForConvertData: completionHandlerForPOST)
+            
+        }
+        
+        task.resume()
+        
+        return task
+    }
     
     // MARK: GET Image
     
     func taskForGETImage(size: String, filePath: String, completionHandlerForImage: (imageData: NSData?, error: NSError?) -> Void) -> NSURLSessionTask {
         
-        /* 1. Set the parameters */
-        // There are none...
         
-        /* 2/3. Build the URL and configure the request */
         let baseURL = NSURL(string: config.baseImageURLString)!
         let url = baseURL.URLByAppendingPathComponent(size).URLByAppendingPathComponent(filePath)
         let request = NSURLRequest(URL: url)
         
-        /* 4. Make the request */
         let task = session.dataTaskWithRequest(request) { (data, response, error) in
             
             /* GUARD: Was there an error? */
@@ -72,11 +150,9 @@ class TMDBClient : NSObject {
                 return
             }
             
-            /* 5/6. Parse the data and use the data (happens in completion handler) */
             completionHandlerForImage(imageData: data, error: nil)
         }
         
-        /* 7. Start the request */
         task.resume()
         
         return task

@@ -49,7 +49,18 @@ class LoginViewController: UIViewController {
             Step 3: Create a session ID
             Bonus Step: Go ahead and get the user id 😄!
         */
-        getRequestToken()
+        
+        //getRequestToken()
+        
+        TMDBClient.sharedInstance().authenticateWithViewController(self) { (success, errorString) in
+            performUIUpdatesOnMain() {
+                if success {
+                    self.completeLogin()
+                } else {
+                    self.displayError(errorString)
+                }
+            }
+        }
     }
     
     // MARK: Login
@@ -66,72 +77,21 @@ class LoginViewController: UIViewController {
         
         /* TASK: Get a request token, then store it (appDelegate.requestToken) and login with the token */
         
-        /* 1. Set the parameters */
-        let methodParameters = [
-            TMDBClient.ParameterKeys.ApiKey: TMDBClient.Constants.ApiKey
-        ]
-        
-        /* 2/3. Build the URL, Configure the request */
-        let request = NSURLRequest(URL: TMDBClient.tmdbURLFromParameters(methodParameters, withPathExtension: TMDBClient.Methods.AuthenticationTokenNew))
-        
-        /* 4. Make the request */
-        let task = tmdbClient.session.dataTaskWithRequest(request) { (data, response, error) in
-            
-            // if an error occurs, print it and re-enable the UI
-            func displayError(error: String) {
-                print(error)
-                performUIUpdatesOnMain {
+        self.tmdbClient.taskForGETMethod(TMDBClient.Methods.AuthenticationTokenNew, parameters: [:]) { (result, error) in
+            if (error != nil) {
+                self.setUIEnabled(true)
+                self.displayError((error?.localizedDescription)!)
+            } else {
+                guard let requestToken = result[TMDBClient.JSONResponseKeys.RequestToken] as? String else {
                     self.setUIEnabled(true)
-                    self.debugTextLabel.text = "Login Failed (Request Token)."
+                    self.displayError("Cannot find key '\(TMDBClient.JSONResponseKeys.RequestToken)' in \(result)")
+                    return
                 }
+                
+                self.tmdbClient.requestToken = requestToken
+                self.loginWithToken(self.tmdbClient.requestToken!)
             }
-            
-            /* GUARD: Was there an error? */
-            guard (error == nil) else {
-                displayError("There was an error with your request: \(error)")
-                return
-            }
-            
-            /* GUARD: Did we get a successful 2XX response? */
-            guard let statusCode = (response as? NSHTTPURLResponse)?.statusCode where statusCode >= 200 && statusCode <= 299 else {
-                displayError("Your request returned a status code other than 2xx!")
-                return
-            }
-            
-            /* GUARD: Was there any data returned? */
-            guard let data = data else {
-                displayError("No data was returned by the request!")
-                return
-            }
-            
-            /* 5. Parse the data */
-            let parsedResult: AnyObject!
-            do {
-                parsedResult = try NSJSONSerialization.JSONObjectWithData(data, options: .AllowFragments)
-            } catch {
-                displayError("Could not parse the data as JSON: '\(data)'")
-                return
-            }
-            
-            /* GUARD: Did TheMovieDB return an error? */
-            if let _ = parsedResult[TMDBClient.JSONResponseKeys.StatusCode] as? Int {
-                displayError("TheMovieDB returned an error. See the '\(TMDBClient.JSONResponseKeys.StatusCode)' and '\(TMDBClient.JSONResponseKeys.StatusMessage)' in \(parsedResult)")
-                return
-            }
-            
-            /* GUARD: Is the "request_token" key in parsedResult? */
-            guard let requestToken = parsedResult[TMDBClient.JSONResponseKeys.RequestToken] as? String else {
-                displayError("Cannot find key '\(TMDBClient.JSONResponseKeys.RequestToken)' in \(parsedResult)")
-                return
-            }
-            
-            /* 6. Use the data! */
-            self.tmdbClient.requestToken = requestToken
-            self.loginWithToken(self.tmdbClient.requestToken!)
         }
-        
-        /* 7. Start the request */
-        task.resume()
     }
     
     private func loginWithToken(requestToken: String) {
@@ -139,6 +99,7 @@ class LoginViewController: UIViewController {
         let authorizationURL = NSURL(string: "\(TMDBClient.Constants.AuthorizationURL)\(requestToken)")
         let request = NSURLRequest(URL: authorizationURL!)
         let webAuthViewController = storyboard!.instantiateViewControllerWithIdentifier("TMDBAuthViewController") as! TMDBAuthViewController
+        
         webAuthViewController.urlRequest = request
         webAuthViewController.requestToken = requestToken
         webAuthViewController.completionHandlerForView = { (success, errorString) in
