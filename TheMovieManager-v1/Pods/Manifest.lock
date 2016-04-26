@@ -1,0 +1,10 @@
+PODS:
+  - PromiseKit/CorePromise (3.1.1)
+
+DEPENDENCIES:
+  - PromiseKit/CorePromise
+
+SPEC CHECKSUMS:
+  PromiseKit: 4e8127c22a9b29d1b44958ab2ec762ea6115cbfb
+
+COCOAPODS: 0.39.0
