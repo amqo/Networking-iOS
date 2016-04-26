@@ -31,7 +31,7 @@ extension TMDBClient {
             if success {
                 
                 // success! we have the requestToken!
-                print(requestToken)
+                print("Request Token: \(requestToken!)")
                 self.requestToken = requestToken
                 
                 self.loginWithToken(requestToken, hostViewController: hostViewController) { (success, errorString) in
@@ -77,13 +77,19 @@ extension TMDBClient {
         /* 2. Make the request */
         /* 3. Send the desired value(s) to completion handler */
         
-        /*
+        let parameters = [String:AnyObject]()
         
-        taskForGETMethod(method, parameters: parameters) { (results, error) in
-        
+        taskForGETMethod(TMDBClient.Methods.AuthenticationTokenNew, parameters: parameters) { (result, error) in
+            if (error != nil) {
+                completionHandlerForToken(success: false, requestToken: nil, errorString: error?.localizedDescription)
+            } else {
+                guard let requestToken = result[TMDBClient.JSONResponseKeys.RequestToken] as? String else {
+                    completionHandlerForToken(success: false, requestToken: nil, errorString: "Cannot find key '\(TMDBClient.JSONResponseKeys.RequestToken)' in \(result)")
+                    return
+                }
+                completionHandlerForToken(success: true, requestToken: requestToken, errorString: nil)
+            }
         }
-        
-        */
     }
     
     private func loginWithToken(requestToken: String?, hostViewController: UIViewController, completionHandlerForLogin: (success: Bool, errorString: String?) -> Void) {
@@ -109,13 +115,17 @@ extension TMDBClient {
         /* 2. Make the request */
         /* 3. Send the desired value(s) to completion handler */
         
-        /*
-        
-        taskForGETMethod(method, parameters: parameters) { (results, error) in
-        
+        taskForGETMethod(TMDBClient.Methods.AuthenticationSessionNew, parameters: [TMDBClient.ParameterKeys.RequestToken: requestToken!]) { (result, error) in
+            if (error != nil) {
+                completionHandlerForSession(success: false, sessionID: nil, errorString: error?.localizedDescription)
+            } else {
+                guard let sessionID = result[TMDBClient.JSONResponseKeys.SessionID] as? String else {
+                    completionHandlerForSession(success: false, sessionID: nil, errorString: "Cannot find key '\(TMDBClient.JSONResponseKeys.SessionID)' in \(result)")
+                    return
+                }
+                completionHandlerForSession(success: true, sessionID: sessionID, errorString: nil)
+            }
         }
-        
-        */
     }
     
     private func getUserID(completionHandlerForUserID: (success: Bool, userID: Int?, errorString: String?) -> Void) {
@@ -124,13 +134,17 @@ extension TMDBClient {
         /* 2. Make the request */
         /* 3. Send the desired value(s) to completion handler */
         
-        /*
-        
-        taskForGETMethod(method, parameters: parameters) { (results, error) in
-        
+        taskForGETMethod(TMDBClient.Methods.Account, parameters: [TMDBClient.ParameterKeys.SessionID: sessionID!]) { (result, error) in
+            if (error != nil) {
+                completionHandlerForUserID(success: false, userID: nil, errorString: error?.localizedDescription)
+            } else {
+                guard let userID = result[TMDBClient.JSONResponseKeys.UserID] as? Int else {
+                    completionHandlerForUserID(success: false, userID: nil, errorString: "Cannot find key '\(TMDBClient.JSONResponseKeys.UserID)' in \(result)")
+                    return
+                }
+                completionHandlerForUserID(success: true, userID: userID, errorString: nil)
+            }
         }
-        
-        */
     }
     
     // MARK: GET Convenience Methods
