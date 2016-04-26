@@ -167,6 +167,24 @@ extension TMDBClient {
         /* 2. Make the request */
         /* 3. Send the desired value(s) to completion handler */
         
+        let parameters: [String: AnyObject!] = [TMDBClient.ParameterKeys.SessionID: sessionID]
+        
+        let method = TMDBClient.sharedInstance().subtituteKeyInMethod(
+            TMDBClient.Methods.AccountIDWatchlistMovies, key: TMDBClient.JSONResponseKeys.UserID, value: "\(self.userID!)")
+        
+        taskForGETMethod(method!, parameters: parameters) { (result, error) in
+            if (error != nil) {
+                completionHandlerForWatchlist(result: nil, error: error)
+            } else {
+                guard let results = result[TMDBClient.JSONResponseKeys.MovieResults] as? [[String: AnyObject]] else {
+                    let userInfo = [NSLocalizedDescriptionKey : "Cannot find key '\(TMDBClient.JSONResponseKeys.MovieResults)' in \(result)"]
+                    let error = NSError(domain: "getMoviesForSearchString", code: 1, userInfo: userInfo)
+                    completionHandlerForWatchlist(result: nil, error: error)
+                    return
+                }
+                completionHandlerForWatchlist(result: TMDBMovie.moviesFromResults(results), error: nil)
+            }
+        }
     }
     
     func getMoviesForSearchString(searchString: String, completionHandlerForMovies: (result: [TMDBMovie]?, error: NSError?) -> Void) -> NSURLSessionDataTask? {
@@ -190,7 +208,6 @@ extension TMDBClient {
                 completionHandlerForMovies(result: TMDBMovie.moviesFromResults(results), error: nil)
             }
         }
-        
         return task
     }
     
