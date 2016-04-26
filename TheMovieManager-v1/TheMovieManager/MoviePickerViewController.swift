@@ -98,7 +98,7 @@ extension MoviePickerViewController: UISearchBarDelegate {
                         }
                     }
                 } else {
-                    print(error)
+                    //print(error)
                 }
             }
         }

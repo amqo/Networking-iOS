@@ -25,19 +25,6 @@ class WatchlistViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         
-        TMDBClient.sharedInstance().getWatchlistMovies() { (result, error) in
-            if (error == nil) {
-                if let movies = result {
-                    self.movies = movies
-                    performUIUpdatesOnMain() {
-                        self.moviesTableView.reloadData()
-                    }
-                }
-            } else {
-                print(error)
-            }
-        }
-        
         // create and set the logout button
         parentViewController!.navigationItem.leftBarButtonItem =
             UIBarButtonItem(barButtonSystemItem: .Reply, target: self, action: #selector(WatchlistViewController.logout))
@@ -45,6 +32,18 @@ class WatchlistViewController: UIViewController {
     
     override func viewWillAppear(animated: Bool) {
         super.viewWillAppear(animated)
+        
+        TMDBClient.sharedInstance().getWatchlistMovies() { (result, error) in
+            
+            if let movies = result {
+                self.movies = movies
+                performUIUpdatesOnMain() {
+                    self.moviesTableView.reloadData()
+                }
+            } else {
+                print(error)
+            }
+        }
     }
     
     // MARK: Logout
@@ -69,6 +68,18 @@ extension WatchlistViewController: UITableViewDelegate, UITableViewDataSource {
         cell.textLabel!.text = movie.title
         cell.imageView!.image = UIImage(named: "Film")
         cell.imageView!.contentMode = UIViewContentMode.ScaleAspectFit
+        
+        if let posterPath = movie.posterPath {
+            TMDBClient.sharedInstance().taskForGETImage(TMDBClient.PosterSizes.RowPoster, filePath: posterPath, completionHandlerForImage: { (imageData, error) in
+                if let image = UIImage(data: imageData!) {
+                    performUIUpdatesOnMain {
+                        cell.imageView!.image = image
+                    }
+                } else {
+                    print(error)
+                }
+            })
+        }
                 
         return cell        
     }
