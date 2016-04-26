@@ -59,7 +59,7 @@ extension TMDBAuthViewController: UIWebViewDelegate {
             }
         } else if webView.request!.URL!.absoluteString == "\(TMDBClient.Constants.AuthorizationURL)\(requestToken!)/deny" {
             dismissViewControllerAnimated(true) {
-                self.completionHandlerForView!(success: false, errorString: "There was an error, please try to Authenticate again.")
+                self.completionHandlerForView!(success: false, errorString: "Please, try to Authenticate again.")
             }
         }
         

@@ -115,7 +115,9 @@ extension TMDBClient {
         /* 2. Make the request */
         /* 3. Send the desired value(s) to completion handler */
         
-        taskForGETMethod(TMDBClient.Methods.AuthenticationSessionNew, parameters: [TMDBClient.ParameterKeys.RequestToken: requestToken!]) { (result, error) in
+        let parameters = [TMDBClient.ParameterKeys.RequestToken: requestToken!]
+        
+        taskForGETMethod(TMDBClient.Methods.AuthenticationSessionNew, parameters: parameters) { (result, error) in
             if (error != nil) {
                 completionHandlerForSession(success: false, sessionID: nil, errorString: error?.localizedDescription)
             } else {
@@ -134,7 +136,9 @@ extension TMDBClient {
         /* 2. Make the request */
         /* 3. Send the desired value(s) to completion handler */
         
-        taskForGETMethod(TMDBClient.Methods.Account, parameters: [TMDBClient.ParameterKeys.SessionID: sessionID!]) { (result, error) in
+        let parameters = [TMDBClient.ParameterKeys.SessionID: sessionID!]
+        
+        taskForGETMethod(TMDBClient.Methods.Account, parameters: parameters) { (result, error) in
             if (error != nil) {
                 completionHandlerForUserID(success: false, userID: nil, errorString: error?.localizedDescription)
             } else {
@@ -170,7 +174,24 @@ extension TMDBClient {
         /* 1. Specify parameters, the API method, and the HTTP body (if POST) */
         /* 2. Make the request */
         /* 3. Send the desired value(s) to completion handler */
-        return nil
+        
+        let parameters = [TMDBClient.ParameterKeys.Query: searchString]
+        
+        let task = taskForGETMethod(TMDBClient.Methods.SearchMovie, parameters: parameters) { (result, error) in
+            if (error != nil) {
+                completionHandlerForMovies(result: nil, error: error)
+            } else {
+                guard let results = result[TMDBClient.JSONResponseKeys.MovieResults] as? [[String: AnyObject]] else {
+                    let userInfo = [NSLocalizedDescriptionKey : "Cannot find key '\(TMDBClient.JSONResponseKeys.MovieResults)' in \(result)"]
+                    let error = NSError(domain: "getMoviesForSearchString", code: 1, userInfo: userInfo)
+                    completionHandlerForMovies(result: nil, error: error)
+                    return
+                }
+                completionHandlerForMovies(result: TMDBMovie.moviesFromResults(results), error: nil)
+            }
+        }
+        
+        return task
     }
     
     func getConfig(completionHandlerForConfig: (didSucceed: Bool, error: NSError?) -> Void) {

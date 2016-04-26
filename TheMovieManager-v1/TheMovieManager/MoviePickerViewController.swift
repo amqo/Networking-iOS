@@ -82,11 +82,25 @@ extension MoviePickerViewController: UISearchBarDelegate {
             task.cancel()
         }
         
+        
         // if the text is empty we are done
         if searchText == "" {
             movies = [TMDBMovie]()
             movieTableView?.reloadData()
             return
+        } else {
+            searchTask = TMDBClient.sharedInstance().getMoviesForSearchString(searchText) { (result, error) in
+                if (error == nil) {
+                    if let movies = result {
+                        self.movies = movies
+                        performUIUpdatesOnMain() {
+                            self.movieTableView.reloadData()
+                        }
+                    }
+                } else {
+                    print(error)
+                }
+            }
         }
     }
     
