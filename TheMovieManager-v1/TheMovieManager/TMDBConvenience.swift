@@ -52,7 +52,7 @@ extension TMDBClient {
                         completionHandlerForAuth(success: success, errorString: errorString)
                         
                     }.error { error -> Void in
-                        print(error)
+                        completionHandlerForAuth(success: success, errorString: errorString)
                     }
                 } else {
                     completionHandlerForAuth(success: success, errorString: errorString)
@@ -60,33 +60,11 @@ extension TMDBClient {
             }
 
             
-        }.error { error -> Void in
-            print(error)
-        }
-    }
-    
-    private func getRequestToken() -> Promise<String> {
-        
-        /* 1. Specify parameters, the API method, and the HTTP body (if POST) */
-        /* 2. Make the request */
-        /* 3. Send the desired value(s) to completion handler */
-        
-        let parameters = [String:AnyObject]()
-        
-        return Promise { fulfill, reject in
-            taskForGETMethod(TMDBClient.Methods.AuthenticationTokenNew, parameters: parameters) { (result, error) in
-                if (error != nil) {
-                    reject(error!)
-                } else {
-                    guard let requestToken = result[TMDBClient.JSONResponseKeys.RequestToken] as? String else {
-                        let userInfo = [NSLocalizedDescriptionKey : "Cannot find key '\(TMDBClient.JSONResponseKeys.RequestToken)' in \(result)"]
-                        let error = NSError(domain: "getRequestToken parsing", code: 0, userInfo: userInfo)
-                        reject(error)
-                        return
-                    }
-                    fulfill(requestToken)
-                }
+        }.error { error in
+            if let error = error as NSError? {
+                completionHandlerForAuth(success: false, errorString: error.localizedDescription)
             }
+            
         }
     }
     
@@ -104,6 +82,27 @@ extension TMDBClient {
         
         performUIUpdatesOnMain {
             hostViewController.presentViewController(webAuthNavigationController, animated: true, completion: nil)
+        }
+    }
+    
+    private func getRequestToken() -> Promise<String> {
+        
+        let parameters = [String:AnyObject]()
+        
+        return Promise { fulfill, reject in
+            taskForGETMethod(TMDBClient.Methods.AuthenticationTokenNew, parameters: parameters) { (result, error) in
+                if (error != nil) {
+                    reject(error!)
+                } else {
+                    guard let requestToken = result[TMDBClient.JSONResponseKeys.RequestToken] as? String else {
+                        let userInfo = [NSLocalizedDescriptionKey : "Cannot find key '\(TMDBClient.JSONResponseKeys.RequestToken)' in \(result)"]
+                        let error = NSError(domain: "getRequestToken parsing", code: 0, userInfo: userInfo)
+                        reject(error)
+                        return
+                    }
+                    fulfill(requestToken)
+                }
+            }
         }
     }
     
